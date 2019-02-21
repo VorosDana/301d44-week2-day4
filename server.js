@@ -58,12 +58,12 @@ function Weather(day) {
 }
 
 function Meetup(meetup) {
-  this.tableName = 'meetups';
   this.link = meetup.link;
   this.name = meetup.group.name;
   this.creation_date = new Date(meetup.group.created).toString().slice(0, 15);
   this.host = meetup.group.who;
-  this.created_at = Date.now();
+  // this.created_at = Date.now();
+  // this.tableName = 'meetups';
 }
 
 // *********************
@@ -137,8 +137,8 @@ function getWeather(request, response) {
     .then(result => {
       // check to see if the location was found and return the results
       if (result.rowCount > 0) {
-        console.log('From SQL');
-        response.send(result.rows[0]);
+        console.log('From SQL', result.rows);
+        response.send(result.rows);
         // Otherwise get the location information from Dark Sky
       } else {
         const url = `https://api.darksky.net/forecast/${process.env.DARKSKY_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`;
@@ -180,7 +180,7 @@ function getMeetups(request, response) {
     .then(result => {
       if (result.rowCount > 0) {
         console.log('From SQL');
-        response.send(result.rows[0]);
+        response.send(result.rows);
       } else {
 
         const url = `https://api.meetup.com/find/upcoming_events?&sign=true&photo-host=public&lon=${request.query.data.longitude}&page=20&lat=${request.query.data.latitude}&key=${process.env.MEETUP_API_KEY}`
@@ -193,7 +193,7 @@ function getMeetups(request, response) {
             });
 
             //SQL TIME
-            let newSQL = `INSTERT INTO meetups(link, name, creation_date, host, location_id) VALUES($1, $2, $3, $4, $5);`;
+            let newSQL = `INSERT INTO meetups(link, name, creation_date, host, location_id) VALUES($1, $2, $3, $4, $5);`;
             meetups.forEach(meetup => {
               let newValues = Object.values(meetup);
               newValues.push(request.query.data.id);
