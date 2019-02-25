@@ -42,6 +42,8 @@ app.get('/yelp', getYelps);
 
 app.get('/trails', getTrails);
 
+app.get(`/movies`, getMovies);
+
 // Make sure the server is listening for requests
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
 
@@ -62,6 +64,7 @@ function Weather(day) {
 }
 
 function Meetup(meetup) {
+  console.log(`meetup`,meetup);
   this.link = meetup.link;
   this.name = meetup.group.name;
   this.creation_date = new Date(meetup.group.created).toString().slice(0, 15);
@@ -71,6 +74,7 @@ function Meetup(meetup) {
 }
 
 function Yelp(yelp) {
+  console.log(`yelp`,yelp);
   this.url = yelp.url;
   this.name = yelp.name;
   this.rating = yelp.rating;
@@ -79,16 +83,28 @@ function Yelp(yelp) {
 }
 
 function Trail(trail) {
+  console.log(`trail`,trail);
   this.trail_url = trail.url;
   this.name = trail.name;
   this.location = trail.location;
   this.length = trail.length;
   this.condition_date = trail.conditionDate.slice(0, 10);
-  this.condition_time =trail.conditionDate.slice(-8);
+  this.condition_time = trail.conditionDate.slice(-8);
   this.conditions = trail.conditionStatus;
-  this.stars = trail.stars;
+  this.stars = trail.stars.toString();
   this.star_votes = trail.starVotes.toString();
   this.summary = trail.summary;
+}
+
+function Movie(movie) {
+  console.log(`movie`,movie);
+  this.title = movie.title;
+  this.released_on = movie.release_date;
+  this.total_votes = movie.vote_count;
+  this.average_votes = movie.vote_average.toString();
+  this.popularity = movie.popularity;
+  this.summary = movie.overview;
+  this.image_url = `https://image.tmdb.org/t/p/w92/${movie.poster_path}`;
 }
 
 // *********************
@@ -116,7 +132,7 @@ function getLocation(query) {
         // Otherwise get the location information from the Google API
       } else {
         const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
-        console.log(url);
+        // console.log(url);
         return superagent.get(url)
           .then(data => {
             // console.log('FROM API line 90');
@@ -181,12 +197,6 @@ function getWeather(request, response) {
               newValues.push(request.query.data.id);
               // Add the recod to th database
               return client.query(newSQL, newValues)
-                .then(result => {
-                  // console.log('160', result.rows);
-                  //attach the id of the newly creeated record to the instance of the location
-                  // This will be used to connect the location to the other databases
-                  // console.log('163', result.rows[0].id);
-                })
                 .catch(console.error);
             })
             response.send(weatherSummaries);
@@ -198,9 +208,9 @@ function getWeather(request, response) {
 
 
 function getMeetups(request, response) {
-  const SQL = `SELECT * FROM meetups WHERE location_id=$1`;
+  const SQL = `SELECT * FROM meetups WHERE location_id=$1;`;
   const values = [request.query.data.id];
-  console.log('178', request.query);
+  // console.log('178', request.query);
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
@@ -224,10 +234,6 @@ function getMeetups(request, response) {
               newValues.push(request.query.data.id);
               // add the record
               return client.query(newSQL, newValues)
-                .then(result => {
-                  // console.log(result.rows);
-                  // console.log(result.rows[0]);
-                })
                 .catch(console.Error);
             })
 
@@ -240,7 +246,7 @@ function getMeetups(request, response) {
 }
 
 function getYelps(request, response) {
-  const SQL = `SELECT * FROM yelps WHERE location_id=$1`;
+  const SQL = `SELECT * FROM yelps WHERE location_id=$1;`;
   const values = [request.query.data.id];
   return client.query(SQL, values)
     .then(result => {
@@ -268,7 +274,7 @@ function getYelps(request, response) {
               return client.query(newSQL, newValues)
                 .catch(console.Error);
             })
-            console.log('yelps:',yelps);
+            // console.log('yelps:', yelps);
 
             response.send(yelps);
           })
@@ -279,7 +285,7 @@ function getYelps(request, response) {
 }
 
 function getTrails(request, response) {
-  const SQL = `SELECT * FROM trails WHERE location_id=$1`;
+  const SQL = `SELECT * FROM trails WHERE location_id=$1;`;
   const values = [request.query.data.id];
   return client.query(SQL, values)
     .then(result => {
@@ -306,7 +312,7 @@ function getTrails(request, response) {
               return client.query(newSQL, newValues)
                 .catch(console.Error);
             })
-            console.log('trails:',trails);
+            // console.log('trails:', trails);
 
             response.send(trails);
           })
@@ -316,7 +322,41 @@ function getTrails(request, response) {
 
 }
 
-function getMovie(request, response) {
+function getMovies(request, response) {
+  const SQL = `SELECT * FROM movies WHERE location_id=$1;`;
+  const values = [request.query.data.id];
+  return client.query(SQL, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        // console.log('From SQL');
+        response.send(result.rows);
+      } else {
+
+        const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_DB_API_KEY}&language=en-US&query=a&page=1&include_adult=false`
+        // console.log(url);
+        superagent.get(url)
+          .then(result => {
+            const movies = result.body.results.map(movieResult => {
+              const movie = new Movie(movieResult);
+              return movie;
+            });
+
+            //SQL TIME
+            let newSQL = `INSERT INTO movies(title, released_on, total_votes, average_votes, popularity, summary, image_url, location_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8);`;
+            movies.forEach(trail => {
+              let newValues = Object.values(trail);
+              newValues.push(request.query.data.id);
+              // add the record
+              return client.query(newSQL, newValues)
+                .catch(console.Error);
+            })
+            // console.log('movies:', movies);
+
+            response.send(movies);
+          })
+          .catch(error => handleError(error, response));
+      }
+    })
 
 }
 

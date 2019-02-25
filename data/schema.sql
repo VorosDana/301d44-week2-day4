@@ -28,9 +28,9 @@ CREATE TABLE IF NOT EXISTS meetups (
 
 CREATE TABLE IF NOT EXISTS yelps (
   id SERIAL PRIMARY KEY,
-  url VARCHAR(255),
+  url TEXT,
   name VARCHAR(255),
-  rating INTEGER NOT NULL,
+  rating VARCHAR(255),
   price VARCHAR(255),
   image_url VARCHAR(255),
   location_id INTEGER NOT NULL,
@@ -42,9 +42,10 @@ CREATE TABLE IF NOT EXISTS movies (
   title VARCHAR(255),
   released_on VARCHAR(255),
   total_votes INTEGER NOT NULL,
-  average_votes INTEGER NOT NULL,
+  average_votes VARCHAR(255),
   popularity VARCHAR(255),
-  summary VARCHAR(255),
+  summary TEXT,
+  image_url VARCHAR(255),
   location_id INTEGER NOT NULL,
   FOREIGN KEY (location_id) REFERENCES locations (id)
 );
