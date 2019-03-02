@@ -26,7 +26,6 @@ client.on('error', err => console.error(err));
 app.get('/location', (request, response) => {
   getLocation(request.query.data)
     .then(location => {
-      // console.log('27', location);
       response.send(location)
     })
     .catch(error => handleError(error, response));
@@ -126,37 +125,29 @@ function getLocation(query) {
     .then(result => {
       // Check to see if the location was found and return the results
       if (result.rowCount > 0) {
-        // console.log('From SQL');
         return result.rows[0];
 
         // Otherwise get the location information from the Google API
       } else {
         const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
-        // console.log(url);
         return superagent.get(url)
           .then(data => {
-            // console.log('FROM API line 90');
             // Throw an error if there is a problem with the API request
             if (!data.body.results.length) { throw 'no Data' }
 
             // Otherwise create an instance of Location
             else {
               let location = new Location(query, data.body.results[0]);
-              // console.log('98', location);
 
               // Create a query string to INSERT a new record with the location data
               let newSQL = `INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id;`;
-              // console.log('102', newSQL)
               let newValues = Object.values(location);
-              // console.log('104', newValues)
 
               // Add the record to the database
               return client.query(newSQL, newValues)
                 .then(result => {
-                  // console.log('108', result.rows);
                   // Attach the id of the newly created record to the instance of location.
                   // This will be used to connect the location to the other databases.
-                  // console.log('114', result.rows[0].id)
                   location.id = result.rows[0].id;
                   return location;
                 })
@@ -178,7 +169,6 @@ function getWeather(request, response) {
     .then(result => {
       // check to see if the location was found and return the results
       if (result.rowCount > 0) {
-        // console.log('From SQL', result.rows);
         response.send(result.rows);
         // Otherwise get the location information from Dark Sky
       } else {
@@ -191,7 +181,6 @@ function getWeather(request, response) {
               return summary;
             });
             let newSQL = `INSERT INTO weathers(forecast, time, location_id) VALUES($1, $2, $3);`;
-            // console.log('153', weatherSummaries);
             weatherSummaries.forEach(summary => {
               let newValues = Object.values(summary);
               newValues.push(request.query.data.id);
@@ -210,11 +199,9 @@ function getWeather(request, response) {
 function getMeetups(request, response) {
   const SQL = `SELECT * FROM meetups WHERE location_id=$1;`;
   const values = [request.query.data.id];
-  // console.log('178', request.query);
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
-        // console.log('From SQL');
         response.send(result.rows);
       } else {
 
@@ -251,7 +238,6 @@ function getYelps(request, response) {
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
-        // console.log('From SQL');
         response.send(result.rows);
       } else {
 
@@ -274,7 +260,6 @@ function getYelps(request, response) {
               return client.query(newSQL, newValues)
                 .catch(console.Error);
             })
-            // console.log('yelps:', yelps);
 
             response.send(yelps);
           })
@@ -290,7 +275,6 @@ function getTrails(request, response) {
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
-        // console.log('From SQL');
         response.send(result.rows);
       } else {
 
@@ -312,7 +296,6 @@ function getTrails(request, response) {
               return client.query(newSQL, newValues)
                 .catch(console.Error);
             })
-            // console.log('trails:', trails);
 
             response.send(trails);
           })
@@ -328,12 +311,10 @@ function getMovies(request, response) {
   return client.query(SQL, values)
     .then(result => {
       if (result.rowCount > 0) {
-        // console.log('From SQL');
         response.send(result.rows);
       } else {
 
         const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_DB_API_KEY}&language=en-US&query=a&page=1&include_adult=false`
-        // console.log(url);
         superagent.get(url)
           .then(result => {
             const movies = result.body.results.map(movieResult => {
@@ -350,7 +331,6 @@ function getMovies(request, response) {
               return client.query(newSQL, newValues)
                 .catch(console.Error);
             })
-            // console.log('movies:', movies);
 
             response.send(movies);
           })
